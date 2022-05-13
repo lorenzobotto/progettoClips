@@ -13,10 +13,11 @@
   (declare (salience 10000))
   =>
   (set-fact-duplication TRUE)
-  (focus DOMANDE SCEGLI-QUALITA QUARTIERI CASE PRINT-RESULTS))
+  (focus DOMANDE SCEGLI-QUALITA QUARTIERI CASE PRINT-RESULTS DOMANDE2 SCEGLI-QUALITA CASE PRINT-RESULTS DOMANDE3 MODIFICA-PREFERENZE CASE PRINT-RESULTS)
+)
 
 (defrule MAIN::combine-certainties ""
-  (declare (salience 100)
+  (declare (salience 200)
            (auto-focus TRUE))
   ?rem1 <- (attribute (nome ?rel) (value ?val) (certainty ?per1))
   ?rem2 <- (attribute (nome ?rel) (value ?val) (certainty ?per2))
@@ -47,6 +48,7 @@
 
 (deftemplate DOMANDE::domanda
    (slot attribute (default ?NONE))
+   (slot giro (default ?NONE))
    (slot the-question (default ?NONE))
    (multislot valid-answers (default ?NONE))
    (slot already-asked (default FALSE))
@@ -54,6 +56,7 @@
    
 (defrule DOMANDE::fai-domanda
    ?f <- (domanda (already-asked FALSE)
+                   (giro 1)
                    (precursors)
                    (the-question ?the-question)
                    (attribute ?the-attribute)
@@ -61,7 +64,18 @@
    =>
    (modify ?f (already-asked TRUE))
    (assert (attribute (nome ?the-attribute)
-                      (value (ask-question ?the-question ?valid-answers)))))
+                      (value (ask-question ?the-question ?valid-answers))))
+)
+
+(defrule DOMANDE::rifai-domanda
+   ?f <- (domanda (already-asked TRUE)
+                   (giro 1)
+                   (precursors)
+                   (attribute ?the-attribute))
+         (attribute (nome ?the-attribute) (value qualsiasi))
+   =>
+   (modify ?f (already-asked REDO))
+)
 
 (defrule DOMANDE::precursore-or-continua
    ?f <- (domanda (already-asked FALSE)
@@ -97,37 +111,90 @@
 ;;* CASE DOMANDE *
 ;;****************
 
-(defmodule CASE-DOMANDE (import DOMANDE ?ALL))
+(defmodule CASE-DOMANDE (import DOMANDE ?ALL) (export ?ALL))
 
 (deffacts CASE-DOMANDE::domande-attributi
+  (domanda (attribute modifiche)
+            (giro 3)
+            (the-question "Vuoi modificare una preferenza? ")
+            (valid-answers 
+                  zona-centro zona-periferia zona-prima-cintura
+                  metri-30 metri-40 metri-50 metri-60 metri-70 metri-80 metri-90 metri-100 metri-120 metri-140 metri-160 metri-180 metri-200 metri-250 metri-300 metri-400 metri-500
+                  indipendente-si indipendente-no
+                  piano-alto piano-basso piano-terra
+                  ascensore-si ascensore-no
+                  bagni-1 bagni-2 bagni-3 bagni-4
+                  balcone-si balcone-no
+                  boxauto-si boxauto-no
+                  garage-si garage-no
+                  no
+            )
+  )
+  (domanda (attribute ha-cane)
+            (giro 2)
+            (the-question "Hai un cane? ")
+            (valid-answers si no))
+  (domanda (attribute fa-aperitivi)
+            (giro 2)
+            (the-question "Sei solito ad invitare amici per mangiare o per fare aperitivi? ")
+            (valid-answers si no ogni-tanto))
+  (domanda (attribute fa-pendolare)
+            (giro 2)
+            (the-question "Fai il pendolare o ti devi spostare in Torino? ")
+            (valid-answers pendolare torino macchina))
+  (domanda (attribute fuma)
+            (giro 2)
+            (the-question "Fumi? ")
+            (valid-answers si no))
+  (domanda (attribute fa-shopping)
+            (giro 2)
+            (the-question "Ami fare shopping? ")
+            (valid-answers si no ogni-tanto))
+  (domanda (attribute ha-bambini)
+            (giro 2)
+            (the-question "Hai dei bambini? ")
+            (valid-answers si no))
+  (domanda (attribute sono-anziani)
+            (giro 2)
+            (the-question "Siete anziani? ")
+            (valid-answers si no))
   (domanda (attribute ha-garage)
+            (giro 1)
             (precursors ha-box is no or ha-box is preferisco-no)
             (the-question "Invece un garage? ")
             (valid-answers si no preferisco-si preferisco-no qualsiasi))
   (domanda (attribute ha-box)
+            (giro 1)
             (the-question "Box per l'auto? ")
             (valid-answers si no preferisco-si preferisco-no qualsiasi))
   (domanda (attribute ha-balcone)
+            (giro 1)
             (the-question "Vorresti avere un balcone? ")
             (valid-answers si no preferisco-si preferisco-no qualsiasi))
   (domanda (attribute ha-bagni)
+            (giro 1)
             (the-question "Quanti bagni dovrebbe avere la casa? ")
             (valid-answers 1 2 3 4 qualsiasi))
   (domanda (attribute ha-ascensore)
+            (giro 1)
             (precursors casa-piano is alto or casa-piano is preferisco-alto)
-            (the-question "Vorreste avere anche un ascensore?")
+            (the-question "Vorreste avere anche un ascensore? ")
             (valid-answers si no preferisco-si preferisco-no qualsiasi))
   (domanda (attribute casa-piano)
+            (giro 1)
             (precursors casa-indipendente is no or casa-indipendente is preferisco-no)
             (the-question "A che piano deve essere la casa? ")
             (valid-answers alto basso terra preferisco-alto preferisco-basso preferisco-terra qualsiasi))
   (domanda (attribute casa-indipendente)
+            (giro 1)
             (the-question "Preferisci una casa indipendente? ")
             (valid-answers si no preferisco-si preferisco-no qualsiasi))
   (domanda (attribute casa-metriquadri)
+            (giro 1)
             (the-question "Di quanti metri quadri vuoi la casa? ")
             (valid-answers 30 40 50 60 70 80 90 100 120 140 160 180 200 250 300 400 500))
   (domanda (attribute casa-zona)
+            (giro 1)
             (the-question "In che zona vuoi comprare la casa? ")
             (valid-answers centro periferia prima-cintura preferisco-centro preferisco-prima-cintura preferisco-periferia qualsiasi))
   ;(domanda (attribute prezzo-massimo)
@@ -135,14 +202,124 @@
   ;          (valid-answers 50000 80000 100000 120000 150000 180000 200000 250000 300000 500000 1000000))
 )
 
+;;*******************************
+;;* REGOLE DOMANDE SECONDO GIRO *
+;;*******************************
+
+(defmodule DOMANDE2     (import MAIN ?ALL) (import DOMANDE ?ALL) (export ?ALL))
+
+(defrule DOMANDE2::prima-domanda-refresh
+   ?f <- (domanda (already-asked FALSE)
+                   (giro 2)
+                   (precursors)
+                   (the-question "Siete anziani? "))
+   =>
+      (refresh PRINT-RESULTS::header)
+      (refresh PRINT-RESULTS::print-casa)
+      (refresh PRINT-RESULTS::remove-poor-casa-choices)
+      (refresh PRINT-RESULTS::end-spaces)
+)
+
+(defrule DOMANDE2::fai-domanda2
+   ?f <- (domanda (already-asked FALSE)
+                   (giro 2)
+                   (precursors)
+                   (the-question ?the-question)
+                   (attribute ?the-attribute)
+                   (valid-answers $?valid-answers))
+   =>
+   (modify ?f (already-asked TRUE))
+   (assert (attribute (nome ?the-attribute)
+                      (value (ask-question ?the-question ?valid-answers))))
+)
+
+;;*******************************
+;;* REGOLE DOMANDE TERZO GIRO   *
+;;*******************************
+
+(defmodule DOMANDE3     (import MAIN ?ALL) (import DOMANDE ?ALL) (export ?ALL))
+
+(defrule DOMANDE3::fai-domanda3
+   ?f <- (domanda (already-asked FALSE)
+                   (giro 3)
+                   (precursors)
+                   (the-question ?the-question)
+                   (attribute ?the-attribute)
+                   (valid-answers $?valid-answers))
+   =>
+   (assert (attribute (nome ?the-attribute)
+                      (value (ask-question ?the-question ?valid-answers))))
+)
+
+(defrule DOMANDE3::rifai-domanda-finale
+   ?f <- (domanda (already-asked FALSE)
+                   (giro 3)
+                   (precursors)
+                   (the-question ?the-question)
+                   (attribute ?the-attribute)
+                   (valid-answers $?valid-answers))
+         (attribute (nome ?the-attribute) (value ~no))
+   =>
+   (assert (attribute (nome ?the-attribute)
+                      (value (ask-question ?the-question ?valid-answers))))
+)
+
+(defrule DOMANDE3::stop-domanda-finale
+   ?f <- (domanda (already-asked FALSE)
+                   (giro 3)
+                   (the-question ?the-question)
+                   (attribute ?the-attribute))
+   ?a <- (attribute (nome ?the-attribute) (value no))
+   =>
+   (modify ?f (already-asked TRUE))
+   (retract ?a)
+   (refresh PRINT-RESULTS::header)
+   (refresh PRINT-RESULTS::print-casa)
+   (refresh PRINT-RESULTS::remove-poor-casa-choices)
+   (refresh PRINT-RESULTS::end-spaces)
+   (refresh CASE::genera-case2)
+)
+
+(defrule DOMANDE3::rifai-domanda3
+   (declare (salience 10))
+   ?f <- (domanda (already-asked REDO)
+                   (the-question ?the-question)
+                   (attribute ?the-attribute)
+                   (valid-answers $?valid-answers))
+   ?a <- (attribute (nome ?the-attribute))
+   =>
+   (modify ?f (already-asked TRUE))
+   (modify ?a (value (ask-question ?the-question ?valid-answers))
+   )
+)
+
+;;*************************
+;;* REGOLE QUARTIERI      *
+;;*************************
+
+(defmodule QUARTIERI (export ?ALL))
+
+(deftemplate QUARTIERI::quartiere
+  (slot nome (default ?NONE))
+  (slot costo-mq (default any))
+  (multislot servizi (default any))
+)
+
+(deffacts QUARTIERI::lista-quartieri
+      (quartiere (nome parella) (costo-mq 1800) (servizi parco scuola ospedale metro bus stazione supermercato))
+      (quartiere (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato piscina centro-commerciale))
+      (quartiere (nome crocetta) (costo-mq 2500) (servizi ospedale bus metro supermercato palestra))
+      (quartiere (nome mirafiori-nord) (costo-mq 2000) (servizi piscina parco bus metro stazione supermercato palestra))
+      (quartiere (nome centro) (costo-mq 5000) (servizi piscina parco bus metro supermercato palestra centro-commerciale))
+      (quartiere (nome san-salvario) (costo-mq 2000) (servizi parco bus metro supermercato ospedale))
+)
 
 ;;*******************************
 ;;* SCEGLI QUALITA' CASE        *
 ;;*******************************
 
 
-(defmodule SCEGLI-QUALITA (import DOMANDE ?ALL)
-                            (import MAIN ?ALL))
+(defmodule SCEGLI-QUALITA (import MAIN ?ALL) (import QUARTIERI ?ALL))
 
 ; Scelta zona migliore
 
@@ -188,7 +365,7 @@
             (attribute (nome casa-zona) (value ?value & ~qualsiasi & ~preferisco-prima-cintura & ~preferisco-centro & ~preferisco-periferia))
       =>
             (assert (attribute (nome best-zona) 
-                     (value centro)))
+                     (value ?value)))
 )
 
 (defrule SCEGLI-QUALITA::best-zonaqualsiasi
@@ -215,10 +392,10 @@
                      (certainty 100.0)))
             (assert (attribute (nome best-metriquadri) 
                      (value (- ?value 10))
-                     (certainty 50.0)))
+                     (certainty 70.0)))
             (assert (attribute (nome best-metriquadri) 
                      (value (+ ?value 10))
-                     (certainty 50.0)))
+                     (certainty 70.0)))
 )
 
 (defrule SCEGLI-QUALITA::best-metriquadri-qualsiasi
@@ -288,7 +465,7 @@
                      (certainty 80.0)))
                   (assert (attribute (nome best-indipendente) 
                      (value no)
-                     (certainty 20.0)))
+                     (certainty 30.0)))
                   (assert (attribute (nome best-piano) 
                      (value terra)
                      (certainty 50.0)))
@@ -471,7 +648,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-ascensore) 
                           (value no)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
             (if (eq ?value preferisco-no)
              then (assert (attribute (nome best-ascensore) 
@@ -479,7 +656,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-ascensore) 
                           (value si)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -511,11 +688,13 @@
             (if (> ?value 1)
              then (assert (attribute (nome best-bagni) 
                      (value (- ?value 1))
-                     (certainty 40.0)))
+                     (certainty 60.0)))
             )
-            (assert (attribute (nome best-bagni) 
+            (if (< ?value 4)
+             then (assert (attribute (nome best-bagni) 
                      (value (+ ?value 1))
-                     (certainty 40.0)))
+                     (certainty 90.0)))
+            )
 )
 
 (defrule SCEGLI-QUALITA::best-bagni-qualsiasi
@@ -546,7 +725,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-balcone) 
                           (value no)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
             (if (eq ?value preferisco-no)
              then (assert (attribute (nome best-balcone) 
@@ -554,7 +733,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-balcone) 
                           (value si)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -587,13 +766,13 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-boxauto) 
                           (value no)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
+                  (assert (attribute (nome best-garage) 
+                          (value no)
+                          (certainty 60.0)))
                   (assert (attribute (nome best-garage) 
                           (value si)
                           (certainty 60.0)))
-                  (assert (attribute (nome best-garage) 
-                          (value no)
-                          (certainty 20.0)))
             )
             (if (eq ?value preferisco-no)
              then (assert (attribute (nome best-boxauto) 
@@ -601,7 +780,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-boxauto) 
                           (value si)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -616,7 +795,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -637,7 +816,7 @@
                      (certainty 20.0)))
 )
 
-; Scelta box auto
+; Scelta garage
 
 (defrule SCEGLI-QUALITA::best-garage-preferisco
             (attribute (nome ha-garage) (value ?value & ~qualsiasi & ~si & ~no))
@@ -648,7 +827,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
             (if (eq ?value preferisco-no)
              then (assert (attribute (nome best-garage) 
@@ -656,7 +835,7 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-garage) 
                           (value si)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -678,25 +857,790 @@
                      (certainty 20.0)))
 )
 
-;;*************************
-;;* REGOLE SELEZIONE ZONE *
-;;*************************
+; Scelta anziani
 
-(defmodule QUARTIERI (export ?ALL))
-
-(deftemplate QUARTIERI::quartiere
-  (slot nome (default ?NONE))
-  (slot costo-mq (default any))
-  (multislot servizi (default any))
+(defrule SCEGLI-QUALITA::best-anziani
+            (attribute (nome sono-anziani) (value ?value))
+            (not (attribute (nome casa-piano) (value ?value2 & alto | basso | terra)))
+            (not (attribute (nome ha-ascensore) (value ?value2 & si | no)))
+      =>
+            (if (eq ?value si)
+             then (assert (attribute (nome best-piano) 
+                        (value basso)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value alto)
+                        (certainty 20.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value terra)
+                        (certainty 80.0)))
+                  (assert (attribute (nome best-ascensore) 
+                        (value si)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-ascensore) 
+                        (value no)
+                        (certainty 30.0)))
+             else (assert (attribute (nome best-piano) 
+                        (value basso)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value alto)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value terra)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-ascensore) 
+                        (value si)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-ascensore) 
+                        (value no)
+                        (certainty 70.0)))
+            )
+            
 )
 
-(deffacts QUARTIERI::lista-quartieri
-      (quartiere (nome parella) (costo-mq 1800) (servizi parco scuola ospedale metro bus supermercato))
-      (quartiere (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato piscina centro-commerciale))
-      (quartiere (nome crocetta) (costo-mq 2500) (servizi ospedale bus metro supermercato palestra))
-      (quartiere (nome mirafiori-nord) (costo-mq 2000) (servizi piscina parco bus metro supermercato palestra))
-      (quartiere (nome centro) (costo-mq 5000) (servizi piscina parco bus metro supermercato palestra centro-commerciale))
-      (quartiere (nome san-salvario) (costo-mq 2000) (servizi parco bus metro supermercato ospedale))
+(defrule SCEGLI-QUALITA::best-anziani-asce
+            (attribute (nome sono-anziani) (value ?value))
+            (not (attribute (nome casa-piano) (value ?value2 & alto | basso | terra)))
+            (attribute (nome ha-ascensore) (value ?value2 & si | no))
+      =>
+            (if (eq ?value si)
+             then (assert (attribute (nome best-piano) 
+                        (value basso)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value alto)
+                        (certainty 20.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value terra)
+                        (certainty 80.0)))
+             else (assert (attribute (nome best-piano) 
+                        (value basso)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value alto)
+                        (certainty 70.0)))
+                  (assert (attribute (nome best-piano) 
+                        (value terra)
+                        (certainty 70.0)))
+            )
+            
+)
+
+; Scelta bambini
+
+(defrule SCEGLI-QUALITA::best-bambini
+            (attribute (nome ha-bambini) (value ?value & si))
+            (or   (quartiere (nome ?nq) (servizi $? parco $?))
+                  (quartiere (nome ?nq) (servizi $? scuola $? ))
+            )
+            (not (quartiere (nome ?nq) (servizi $? parco scuola $?)))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 70.0))
+            ) 
+)
+
+(defrule SCEGLI-QUALITA::best-bambini-parco-scuola
+            (attribute (nome ha-bambini) (value ?value & si))
+            (quartiere (nome ?nq) (servizi $? parco scuola $?))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 85.0))
+            ) 
+)
+
+(defrule SCEGLI-QUALITA::best-bambini-zona
+            (attribute (nome ha-bambini) (value ?value & si))
+            (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
+
+      =>
+            (assert (attribute (nome best-zona) 
+                        (value periferia)
+                        (certainty 65.0))
+            )  
+            (assert (attribute (nome best-zona) 
+                        (value centro)
+                        (certainty 30.0))
+            ) 
+            (assert (attribute (nome best-zona) 
+                        (value prima-cintura)
+                        (certainty 65.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-bambini-indip
+            (attribute (nome ha-bambini) (value ?value & si))
+            (not (attribute (nome casa-indipendente) (value ?value2 & si | no)))
+      =>
+            (assert (attribute (nome best-indipendente) 
+                        (value si)
+                        (certainty 70.0))
+            )
+            (assert (attribute (nome best-indipendente) 
+                        (value no)
+                        (certainty 25.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-bambini-no
+            (attribute (nome ha-bambini) (value ?value & no))
+            (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
+      =>
+            (assert (attribute (nome best-zona) 
+                        (value centro)
+                        (certainty 70.0))
+            )  
+            (assert (attribute (nome best-zona) 
+                        (value periferia)
+                        (certainty 50.0))
+            ) 
+            (assert (attribute (nome best-zona) 
+                        (value prima-cintura)
+                        (certainty 50.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-bambini-indip-no
+            (attribute (nome ha-bambini) (value ?value & no))
+            (not (attribute (nome casa-indipendente) (value ?value2 & si | no)))
+      =>
+            (assert (attribute (nome best-indipendente) 
+                        (value si)
+                        (certainty 40.0))
+            )
+            (assert (attribute (nome best-indipendente) 
+                        (value no)
+                        (certainty 50.0))
+            )  
+)
+
+; Scelta shopping
+
+(defrule SCEGLI-QUALITA::best-shopping
+            (attribute (nome fa-shopping) (value ?value & si))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 70.0))
+            )
+            (assert (attribute (nome best-zona) 
+                        (value centro)
+                        (certainty 85.0))
+            ) 
+)
+
+(defrule SCEGLI-QUALITA::best-shopping-sicuro
+            (attribute (nome fa-shopping) (value ?value & si))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 70.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-shopping-ogni-tanto
+            (attribute (nome fa-shopping) (value ?value & ogni-tanto))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 55.0))
+            )
+            (assert (attribute (nome best-zona) 
+                        (value centro)
+                        (certainty 55.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-shopping-ogni-tanto-sicuro
+            (attribute (nome fa-shopping) (value ?value & ogni-tanto))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 55.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-shopping-no
+            (attribute (nome fa-shopping) (value ?value & no))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 30.0))
+            )
+            (assert (attribute (nome best-zona) 
+                        (value centro)
+                        (certainty 30.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-shopping-no-sicuro
+            (attribute (nome fa-shopping) (value ?value & no))
+            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 30.0))
+            ) 
+)
+
+; Scelta fumatore
+
+(defrule SCEGLI-QUALITA::best-fumatore-si
+            (attribute (nome fuma) (value ?value & si))
+      =>
+            (assert (attribute (nome best-balcone) 
+                        (value si)
+                        (certainty 80.0))
+            )
+            (assert (attribute (nome best-balcone) 
+                        (value no)
+                        (certainty 30.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-fumatore-no
+            (attribute (nome fuma) (value ?value & no))
+      =>
+            (assert (attribute (nome best-balcone) 
+                        (value si)
+                        (certainty 50.0))
+            )
+            (assert (attribute (nome best-balcone) 
+                        (value no)
+                        (certainty 50.0))
+            )  
+)
+
+; Scelta pendolare
+
+(defrule SCEGLI-QUALITA::best-pendolare-si
+            (attribute (nome fa-pendolare) (value ?value & pendolare))
+            (quartiere (nome ?nq) (servizi $? stazione $?))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 80.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-pendolare-torino
+            (attribute (nome fa-pendolare) (value ?value & torino))
+            (or (quartiere (nome ?nq) (servizi $? bus $?))
+                (quartiere (nome ?nq) (servizi $? metro $?))
+            )
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 80.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-pendolare-macchina
+            (attribute (nome fa-pendolare) (value ?value & macchina))
+            (quartiere (nome ?nq))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 70.0))
+            ) 
+)
+
+; Scelta aperitivo
+
+(defrule SCEGLI-QUALITA::best-aperitivo-si
+            (attribute (nome fa-aperitivi) (value ?value & si))
+      =>
+            (assert (attribute (nome best-terrazzino) 
+                        (value si)
+                        (certainty 80.0))
+            )
+            (assert (attribute (nome best-terrazzino) 
+                        (value no)
+                        (certainty 30.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-aperitivo-no
+            (attribute (nome fa-aperitivi) (value ?value & no))
+      =>
+            (assert (attribute (nome best-terrazzino) 
+                        (value no)
+                        (certainty 50.0))
+            )
+            (assert (attribute (nome best-terrazzino) 
+                        (value si)
+                        (certainty 30.0))
+            )  
+)
+
+(defrule SCEGLI-QUALITA::best-aperitivo-ogni-tanto
+            (attribute (nome fa-aperitivi) (value ?value & ogni-tanto))
+      =>
+            (assert (attribute (nome best-terrazzino) 
+                        (value no)
+                        (certainty 50.0))
+            )
+            (assert (attribute (nome best-terrazzino) 
+                        (value si)
+                        (certainty 60.0))
+            )  
+)
+
+; Scelta cane
+
+(defrule SCEGLI-QUALITA::best-cane-si
+            (attribute (nome ha-cane) (value ?value & si))
+            (not (attribute (nome casa-indipendente) (value ?value2 & si | no)))
+      =>
+            (assert (attribute (nome best-indipendente) 
+                        (value si)
+                        (certainty 80.0))
+            )
+            (assert (attribute (nome best-indipendente) 
+                        (value no)
+                        (certainty 30.0))
+            )
+)
+
+(defrule SCEGLI-QUALITA::best-cane-si-quart
+            (attribute (nome ha-cane) (value ?value & si))
+            (quartiere (nome ?nq) (servizi $? parco $?))
+      =>
+            (assert (attribute (nome best-quartiere) 
+                        (value ?nq)
+                        (certainty 70.0))
+            )
+)
+
+;;*************************
+;;* MODIFICA PREFERENZE   *
+;;*************************
+
+(defmodule MODIFICA-PREFERENZE (import MAIN ?ALL))
+
+; Modifiche preferenze zona
+
+(defrule MODIFICA-PREFERENZE::modifica-zona-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
+      ?a <- (attribute (nome best-zona & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-zona-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
+      =>
+            (if (eq ?value zona-centro)
+             then (assert (attribute (nome best-zona) 
+                     (value centro)))
+            )
+            (if (eq ?value zona-periferia)
+             then (assert (attribute (nome best-zona) 
+                     (value periferia)))
+            )
+            (if (eq ?value zona-prima-cintura)
+             then (assert (attribute (nome best-zona) 
+                     (value prima-cintura)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenze metri quadri
+
+(defrule MODIFICA-PREFERENZE::modifica-metri-quadri-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & metri-30 | metri-40 | metri-50 | metri-60 | metri-70 | metri-80 | metri-90 | metri-100 | metri-120 | metri-140 | metri-160 | metri-180 | metri-200 | metri-250 | metri-300 | metri-400 | metri-500))
+      ?a <- (attribute (nome best-metriquadri & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-metri-quadri-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & metri-30 | metri-40 | metri-50 | metri-60 | metri-70 | metri-80 | metri-90 | metri-100 | metri-120 | metri-140 | metri-160 | metri-180 | metri-200 | metri-250 | metri-300 | metri-400 | metri-500))
+      =>
+            (if (eq ?value metri-30)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 30)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 40)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 20)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-40)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 40)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 50)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 30)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-50)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 50)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 60)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 40)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-60)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 60)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 70)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 50)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-70)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 70)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 80)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 60)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-80)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 80)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 90)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 70)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-90)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 90)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 100)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 80)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-100)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 100)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 110)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 90)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-120)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 120)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 130)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 110)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-140)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 140)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 150)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 130)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-160)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 160)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 170)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 150)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-180)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 180)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 190)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 170)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-200)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 200)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 210)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 190)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-250)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 250)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 260)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 240)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-300)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 300)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 310)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 290)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-400)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 400)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 410)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 390)
+                     (certainty 70.0)))
+            )
+            (if (eq ?value metri-500)
+             then (assert (attribute (nome best-metriquadri) 
+                     (value 500)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 510)
+                     (certainty 70.0)))
+                  (assert (attribute (nome best-metriquadri) 
+                     (value 490)
+                     (certainty 70.0)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza indipendente
+
+(defrule MODIFICA-PREFERENZE::modifica-indipendente-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
+      ?a <- (attribute (nome best-indipendente & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-indipendente-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
+      =>
+            (if (eq ?value indipendente-si)
+             then (assert (attribute (nome best-indipendente) 
+                     (value si)))
+             else (assert (attribute (nome best-indipendente) 
+                     (value no)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza indipendente
+
+(defrule MODIFICA-PREFERENZE::modifica-piano-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
+      ?a <- (attribute (nome best-piano & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-piano-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
+      =>
+            (if (eq ?value piano-alto)
+             then (assert (attribute (nome best-piano) 
+                     (value alto)))
+            )
+            (if (eq ?value piano-basso)
+             then (assert (attribute (nome best-piano) 
+                     (value basso)))
+            )
+            (if (eq ?value piano-terra)
+             then (assert (attribute (nome best-piano) 
+                     (value terra)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza ascensore
+
+(defrule MODIFICA-PREFERENZE::modifica-ascensore-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
+      ?a <- (attribute (nome best-ascensore & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-ascensore-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
+      =>
+            (if (eq ?value ascensore-si)
+             then (assert (attribute (nome best-ascensore) 
+                     (value si)))
+             else (assert (attribute (nome best-ascensore) 
+                     (value no)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza bagni
+
+(defrule MODIFICA-PREFERENZE::modifica-bagni-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & bagni-1 | bagni-2 | bagni-3 | bagni-4))
+      ?a <- (attribute (nome best-bagni & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-bagni-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & bagni-1 | bagni-2 | bagni-3 | bagni-4))
+      =>
+            (if (eq ?value bagni-1)
+             then (assert (attribute (nome best-bagni) 
+                     (value 1)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 2)
+                     (certainty 90.0)))
+            )
+            (if (eq ?value bagni-2)
+             then (assert (attribute (nome best-bagni) 
+                     (value 2)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 3)
+                     (certainty 90.0)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 1)
+                     (certainty 60.0)))
+            )
+            (if (eq ?value bagni-3)
+             then (assert (attribute (nome best-bagni) 
+                     (value 3)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 4)
+                     (certainty 90.0)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 2)
+                     (certainty 60.0)))
+            )
+            (if (eq ?value bagni-4)
+             then (assert (attribute (nome best-bagni) 
+                     (value 4)))
+                  (assert (attribute (nome best-bagni) 
+                     (value 3)
+                     (certainty 60.0)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza balcone
+
+(defrule MODIFICA-PREFERENZE::modifica-balcone-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
+      ?a <- (attribute (nome best-balcone & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-balcone-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
+      =>
+            (if (eq ?value balcone-si)
+             then (assert (attribute (nome best-balcone) 
+                     (value si)))
+             else (assert (attribute (nome best-balcone) 
+                     (value no)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza boxauto
+
+(defrule MODIFICA-PREFERENZE::modifica-boxauto-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
+      ?a <- (attribute (nome best-boxauto & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-boxauto-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
+      =>
+            (if (eq ?value boxauto-si)
+             then (assert (attribute (nome best-boxauto) 
+                     (value si)))
+             else (assert (attribute (nome best-boxauto) 
+                     (value no)))
+            )
+            (retract ?a)
+)
+
+; Modifiche preferenza garage
+
+(defrule MODIFICA-PREFERENZE::modifica-garage-cancella
+      (declare (salience 20))
+            (attribute (nome modifiche) (value ?value & garage-si | garage-no))
+      ?a <- (attribute (nome best-garage & ~any))
+      =>
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-garage-inserisci
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche) (value ?value & garage-si | garage-no))
+      =>
+            (if (eq ?value garage-si)
+             then (assert (attribute (nome best-garage) 
+                     (value si)))
+             else (assert (attribute (nome best-garage) 
+                     (value no)))
+            )
+            (retract ?a)
 )
 
 ;;*************************
@@ -751,7 +1695,7 @@
   (casa (nome villaCentro) (metriquadri 250) (vani 7) (citta torino) (zona centro) (quartiere centro) 
         (boxauto no) (garage si) (terrazzino si) (balcone si) (indipendente si) (bagni 3))
   (casa (nome casaParella) (metriquadri 60) (vani 5) (piano basso 2) (citta torino) (zona prima-cintura) (quartiere parella) 
-        (ascensore no) (boxauto si 15) (garage no) (terrazzino no) (balcone si) (indipendente no) (bagni 1))
+        (ascensore no) (boxauto si 15) (garage no) (terrazzino no) (balcone si) (indipendente si) (bagni 1))
   (casa (nome casaParella2) (metriquadri 100) (vani 2) (citta torino) (zona prima-cintura) (quartiere parella) 
         (garage si) (balcone si) (indipendente si) (bagni 2))
   (casa (nome casaPeriferia2) (metriquadri 80) (vani 2) (piano alto 5) (citta torino) (zona periferia) (quartiere san-salvario) 
@@ -768,7 +1712,7 @@
         (garage no) (boxauto si 35) (terrazzino no) (indipendente si) (bagni 2))
   (casa (nome casaCrocetta) (metriquadri 90) (vani 3) (citta torino) (zona prima-cintura) (quartiere crocetta) 
         (garage si) (boxauto no) (balcone si) (indipendente si) (bagni 2))
-  (casa (nome casaCrocetta) (metriquadri 70) (vani 2) (piano basso 1) (citta torino) (zona prima-cintura) (quartiere crocetta) 
+  (casa (nome casaCrocetta2) (metriquadri 70) (vani 2) (piano basso 1) (citta torino) (zona prima-cintura) (quartiere crocetta) 
         (garage si) (boxauto no) (balcone no) (terrazzino no) (indipendente no) (bagni 1))
 )
 
@@ -794,6 +1738,7 @@
 )
   
 (defrule CASE::genera-case
+ (declare (salience 5))
   (casa (nome ?nome)
         (metriquadri ?mq)
         (vani ?vani)
@@ -820,11 +1765,49 @@
   (attribute (nome best-balcone) (value ?balcone) (certainty ?certainty-16))
   (attribute (nome best-ascensore) (value ?asce) (certainty ?certainty-17))
   (attribute (nome best-bagni) (value ?bagni) (certainty ?certainty-18))
+  (not (attribute (nome best-quartiere) (value ?quart) (certainty ?certainty-19)))
   =>
   (assert (attribute (nome casa) (value ?nome)
                 (certainty (min ?certainty-1 ?certainty-16 ?certainty-4
                                 ?certainty-6 ?certainty-15 ?certainty-17
                                 ?certainty-9  ?certainty-14 ?certainty-18
+                          ))))
+  )
+
+(defrule CASE::genera-case2
+ (declare (salience 5))
+  (casa (nome ?nome)
+        (metriquadri ?mq)
+        (vani ?vani)
+        (servizi ?serv)
+        (piano $? ?pianoAltezza $?)
+        (citta ?citta)
+        (zona ?zona)
+        (quartiere ?quart)
+        (ascensore ?asce)
+        (boxauto $? ?box $?)
+        (garage ?garage)
+        (terrazzino ?terraz)
+        (balcone ?balcone)
+        (prezzo ?prezzo)
+        (indipendente ?indip)
+        (bagni ?bagni)
+  )
+  (attribute (nome best-metriquadri) (value ?mq) (certainty ?certainty-1))
+  (attribute (nome best-piano) (value ?pianoAltezza) (certainty ?certainty-4))
+  (attribute (nome best-zona) (value ?zona) (certainty ?certainty-6))
+  (attribute (nome best-boxauto) (value ?box) (certainty ?certainty-9))
+  (attribute (nome best-indipendente) (value ?indip) (certainty ?certainty-14))
+  (attribute (nome best-garage) (value ?garage) (certainty ?certainty-15))
+  (attribute (nome best-balcone) (value ?balcone) (certainty ?certainty-16))
+  (attribute (nome best-ascensore) (value ?asce) (certainty ?certainty-17))
+  (attribute (nome best-bagni) (value ?bagni) (certainty ?certainty-18))
+  (attribute (nome best-quartiere) (value ?quart) (certainty ?certainty-19))
+  =>
+  (assert (attribute (nome casa) (value ?nome)
+                (certainty (min ?certainty-1 ?certainty-16 ?certainty-4
+                                ?certainty-6 ?certainty-15 ?certainty-17
+                                ?certainty-9  ?certainty-14 ?certainty-18 ?certainty-19
                           ))))
   )
 
@@ -837,11 +1820,8 @@
 (defrule PRINT-RESULTS::header ""
    (declare (salience 10))
    =>
-   (printout t t)
-   (printout t "        CASE SELEZIONATE" t t)
-   (printout t " CASA                  CERTAINTY" t)
-   (printout t " -------------------------------" t)
-   (assert (phase print-casa)))
+   (format t "%n------------------------------- CASE SELEZIONATE  --->  CASA  CERTAINTY -------------------------------%n")
+)
 
 (defrule PRINT-RESULTS::print-casa ""
   ?rem <- (attribute (nome casa) (value ?nome) (certainty ?per))		  
@@ -858,4 +1838,6 @@
 (defrule PRINT-RESULTS::end-spaces ""
    (not (attribute (nome casa)))
    =>
-   (printout t t))
+   (format t "-------------------------------------------------------------------------------------------------------")
+   (format t "%n%n")
+)
