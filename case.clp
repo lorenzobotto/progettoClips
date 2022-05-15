@@ -12,8 +12,9 @@
 (defrule MAIN::start
   (declare (salience 10000))
   =>
+  (set-strategy depth)
   (set-fact-duplication TRUE)
-  (focus DOMANDE SCEGLI-QUALITA QUARTIERI CASE PRINT-RESULTS DOMANDE2 SCEGLI-QUALITA CASE PRINT-RESULTS DOMANDE3 MODIFICA-PREFERENZE CASE PRINT-RESULTS)
+  (focus GENERA-PREZZI DOMANDE SCEGLI-QUALITA QUARTIERI CASE PRINT-RESULTS DOMANDE2 SCEGLI-QUALITA CASE PRINT-RESULTS DOMANDE3 MODIFICA-PREFERENZE CASE PRINT-RESULTS)
 )
 
 (defrule MAIN::combine-certainties ""
@@ -140,7 +141,7 @@
             (valid-answers si no ogni-tanto))
   (domanda (attribute fa-pendolare)
             (giro 2)
-            (the-question "Fai il pendolare o ti devi spostare in Torino? ")
+            (the-question "Fai il pendolare, ti sposti in Torino tramite i mezzi o usi la macchina? ")
             (valid-answers pendolare torino macchina))
   (domanda (attribute fuma)
             (giro 2)
@@ -158,6 +159,10 @@
             (giro 2)
             (the-question "Siete anziani? ")
             (valid-answers si no))
+  (domanda (attribute prezzo-massimo)
+            (giro 1)
+            (the-question "Quanto vuoi spendere come massimo? ")
+            (valid-answers 50000 80000 100000 120000 150000 180000 200000 250000 300000 500000 1000000))
   (domanda (attribute ha-garage)
             (giro 1)
             (precursors ha-box is no or ha-box is preferisco-no)
@@ -174,7 +179,7 @@
   (domanda (attribute ha-bagni)
             (giro 1)
             (the-question "Quanti bagni dovrebbe avere la casa? ")
-            (valid-answers 1 2 3 4 qualsiasi))
+            (valid-answers 1 2 3 4))
   (domanda (attribute ha-ascensore)
             (giro 1)
             (precursors casa-piano is alto or casa-piano is preferisco-alto)
@@ -197,9 +202,6 @@
             (giro 1)
             (the-question "In che zona vuoi comprare la casa? ")
             (valid-answers centro periferia prima-cintura preferisco-centro preferisco-prima-cintura preferisco-periferia qualsiasi))
-  ;(domanda (attribute prezzo-massimo)
-  ;          (the-question "Quanto vuoi spendere come massimo? ")
-  ;          (valid-answers 50000 80000 100000 120000 150000 180000 200000 250000 300000 500000 1000000))
 )
 
 ;;*******************************
@@ -278,6 +280,7 @@
    (refresh PRINT-RESULTS::remove-poor-casa-choices)
    (refresh PRINT-RESULTS::end-spaces)
    (refresh CASE::genera-case2)
+   (set-strategy breadth)
 )
 
 (defrule DOMANDE3::rifai-domanda3
@@ -289,7 +292,8 @@
    ?a <- (attribute (nome ?the-attribute))
    =>
    (modify ?f (already-asked TRUE))
-   (modify ?a (value (ask-question ?the-question ?valid-answers))
+   (assert (attribute (nome (sym-cat modifiche- ?the-attribute))
+                      (value (ask-question ?the-question ?valid-answers)))
    )
 )
 
@@ -681,7 +685,7 @@
 ; Scelta bagni
 
 (defrule SCEGLI-QUALITA::best-bagni
-            (attribute (nome ha-bagni) (value ?value & ~qualsiasi))
+            (attribute (nome ha-bagni) (value ?value))
       =>
             (assert (attribute (nome best-bagni) 
                      (value ?value)))
@@ -695,23 +699,6 @@
                      (value (+ ?value 1))
                      (certainty 90.0)))
             )
-)
-
-(defrule SCEGLI-QUALITA::best-bagni-qualsiasi
-            (attribute (nome ha-bagni) (value ?value & qualsiasi))
-      =>
-            (assert (attribute (nome best-bagni) 
-                     (value 1)
-                     (certainty 20.0)))
-            (assert (attribute (nome best-bagni) 
-                     (value 2)
-                     (certainty 20.0)))
-            (assert (attribute (nome best-bagni) 
-                     (value 3)
-                     (certainty 20.0)))
-            (assert (attribute (nome best-bagni) 
-                     (value 4)
-                     (certainty 20.0)))
 )
 
 ; Scelta balcone
@@ -766,13 +753,13 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-boxauto) 
                           (value no)
-                          (certainty 30.0)))
+                          (certainty 40.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
-                          (certainty 60.0)))
+                          (certainty 40.0)))
                   (assert (attribute (nome best-garage) 
                           (value si)
-                          (certainty 60.0)))
+                          (certainty 80.0)))
             )
             (if (eq ?value preferisco-no)
              then (assert (attribute (nome best-boxauto) 
@@ -792,7 +779,7 @@
             (if (eq ?value si)
              then (assert (attribute (nome best-garage) 
                           (value si)
-                          (certainty 80.0)))
+                          (certainty 100.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
                           (certainty 30.0)))
@@ -862,7 +849,7 @@
 (defrule SCEGLI-QUALITA::best-anziani
             (attribute (nome sono-anziani) (value ?value))
             (not (attribute (nome casa-piano) (value ?value2 & alto | basso | terra)))
-            (not (attribute (nome ha-ascensore) (value ?value2 & si | no)))
+            (not (attribute (nome ha-ascensore) (value ?value3 & si | no)))
       =>
             (if (eq ?value si)
              then (assert (attribute (nome best-piano) 
@@ -902,7 +889,7 @@
 (defrule SCEGLI-QUALITA::best-anziani-asce
             (attribute (nome sono-anziani) (value ?value))
             (not (attribute (nome casa-piano) (value ?value2 & alto | basso | terra)))
-            (attribute (nome ha-ascensore) (value ?value2 & si | no))
+            (attribute (nome ha-ascensore) (value ?value3 & si | no))
       =>
             (if (eq ?value si)
              then (assert (attribute (nome best-piano) 
@@ -1170,7 +1157,7 @@
             )
             (assert (attribute (nome best-terrazzino) 
                         (value no)
-                        (certainty 30.0))
+                        (certainty 60.0))
             )  
 )
 
@@ -1179,11 +1166,11 @@
       =>
             (assert (attribute (nome best-terrazzino) 
                         (value no)
-                        (certainty 50.0))
+                        (certainty 60.0))
             )
             (assert (attribute (nome best-terrazzino) 
                         (value si)
-                        (certainty 30.0))
+                        (certainty 80.0))
             )  
 )
 
@@ -1192,7 +1179,7 @@
       =>
             (assert (attribute (nome best-terrazzino) 
                         (value no)
-                        (certainty 50.0))
+                        (certainty 60.0))
             )
             (assert (attribute (nome best-terrazzino) 
                         (value si)
@@ -1236,27 +1223,71 @@
 
 (defrule MODIFICA-PREFERENZE::modifica-zona-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
-      ?a <- (attribute (nome best-zona & ~any))
+           (or    (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
+                  (attribute (nome modifiche-casa-zona) (value ?value & ~qualsiasi))
+           )
+      ?a <- (attribute (nome best-zona) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-zona-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
+       (or  ?a <-  (attribute (nome modifiche) (value ?value & zona-centro | zona-periferia | zona-prima-cintura))
+            ?a <-  (attribute (nome modifiche-casa-zona) (value ?value & centro | periferia | prima-cintura))
+       )
       =>
-            (if (eq ?value zona-centro)
+            (if (or (eq ?value zona-centro) (eq ?value centro))
              then (assert (attribute (nome best-zona) 
                      (value centro)))
             )
-            (if (eq ?value zona-periferia)
+            (if (or (eq ?value zona-periferia) (eq ?value periferia))
              then (assert (attribute (nome best-zona) 
                      (value periferia)))
             )
-            (if (eq ?value zona-prima-cintura)
+            (if (or (eq ?value zona-prima-cintura) (eq ?value prima-cintura))
              then (assert (attribute (nome best-zona) 
                      (value prima-cintura)))
+            )
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-zona-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-casa-zona) (value ?value & preferisco-centro | preferisco-periferia | preferisco-prima-cintura))
+      =>
+            (if (eq ?value preferisco-centro)
+             then (assert (attribute (nome best-zona) 
+                          (value centro)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value periferia)
+                          (certainty 20.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value prima-cintura)
+                          (certainty 20.0)))
+            )
+            (if (eq ?value preferisco-periferia)
+             then (assert (attribute (nome best-zona) 
+                          (value periferia)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value centro)
+                          (certainty 20.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value prima-cintura)
+                          (certainty 20.0)))
+            )
+            (if (eq ?value preferisco-prima-cintura)
+             then (assert (attribute (nome best-zona) 
+                          (value prima-cintura)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value centro)
+                          (certainty 20.0)))
+                  (assert (attribute (nome best-zona) 
+                          (value periferia)
+                          (certainty 20.0)))
             )
             (retract ?a)
 )
@@ -1266,7 +1297,7 @@
 (defrule MODIFICA-PREFERENZE::modifica-metri-quadri-cancella
       (declare (salience 20))
             (attribute (nome modifiche) (value ?value & metri-30 | metri-40 | metri-50 | metri-60 | metri-70 | metri-80 | metri-90 | metri-100 | metri-120 | metri-140 | metri-160 | metri-180 | metri-200 | metri-250 | metri-300 | metri-400 | metri-500))
-      ?a <- (attribute (nome best-metriquadri & ~any))
+      ?a <- (attribute (nome best-metriquadri) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
@@ -1452,17 +1483,21 @@
 
 (defrule MODIFICA-PREFERENZE::modifica-indipendente-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
-      ?a <- (attribute (nome best-indipendente & ~any))
+      (or   (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
+            (attribute (nome modifiche-casa-indipendente) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-indipendente) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-indipendente-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & indipendente-si | indipendente-no))
+            ?a <- (attribute (nome modifiche-casa-indipendente) (value ?value & si | no))
+      )
       =>
-            (if (eq ?value indipendente-si)
+            (if (or (eq ?value indipendente-si) (eq ?value si))
              then (assert (attribute (nome best-indipendente) 
                      (value si)))
              else (assert (attribute (nome best-indipendente) 
@@ -1471,31 +1506,98 @@
             (retract ?a)
 )
 
+(defrule MODIFICA-PREFERENZE::modifica-indipendente-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-casa-indipendente) (value ?value & preferisco-si | preferisco-no))
+      =>
+            (if (eq ?value preferisco-si)
+             then (assert (attribute (nome best-indipendente) 
+                     (value si)
+                     (certainty 80.0)))
+                  (assert (attribute (nome best-indipendente) 
+                     (value no)
+                     (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-no)
+             then (assert (attribute (nome best-indipendente) 
+                     (value no)
+                     (certainty 80.0)))
+                  (assert (attribute (nome best-indipendente) 
+                     (value si)
+                     (certainty 20.0)))
+            )
+            (retract ?a)
+)
+
 ; Modifiche preferenza indipendente
 
 (defrule MODIFICA-PREFERENZE::modifica-piano-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
-      ?a <- (attribute (nome best-piano & ~any))
+      (or   (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
+            (attribute (nome modifiche-casa-piano) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-piano) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-piano-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & piano-alto | piano-basso | piano-terra))
+            ?a <- (attribute (nome modifiche-casa-piano) (value ?value & alto | basso | terra))
+      )
       =>
-            (if (eq ?value piano-alto)
+            (if (or (eq ?value piano-alto) (eq ?value alto))
              then (assert (attribute (nome best-piano) 
                      (value alto)))
             )
-            (if (eq ?value piano-basso)
+            (if (or (eq ?value piano-basso) (eq ?value basso))
              then (assert (attribute (nome best-piano) 
                      (value basso)))
             )
-            (if (eq ?value piano-terra)
+            (if (or (eq ?value piano-terra) (eq ?value terra))
              then (assert (attribute (nome best-piano) 
                      (value terra)))
+            )
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-piano-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-casa-piano) (value ?value & preferisco-alto | preferisco-basso | preferisco-terra))
+      =>
+            (if (eq ?value preferisco-alto)
+             then (assert (attribute (nome best-piano) 
+                          (value alto)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value terra)
+                          (certainty 30.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value basso)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-basso)
+             then (assert (attribute (nome best-piano) 
+                          (value basso)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value terra)
+                          (certainty 30.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value alto)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-terra)
+             then (assert (attribute (nome best-piano) 
+                          (value terra)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value basso)
+                          (certainty 30.0)))
+                  (assert (attribute (nome best-piano) 
+                          (value alto)
+                          (certainty 30.0)))
             )
             (retract ?a)
 )
@@ -1504,21 +1606,48 @@
 
 (defrule MODIFICA-PREFERENZE::modifica-ascensore-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
-      ?a <- (attribute (nome best-ascensore & ~any))
+      (or   (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
+            (attribute (nome modifiche-ha-ascensore) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-ascensore) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-ascensore-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & ascensore-si | ascensore-no))
+            ?a <- (attribute (nome modifiche-ha-ascensore) (value ?value & si | no))
+      )
       =>
-            (if (eq ?value ascensore-si)
+            (if (or (eq ?value ascensore-si) (eq ?value si))
              then (assert (attribute (nome best-ascensore) 
                      (value si)))
              else (assert (attribute (nome best-ascensore) 
                      (value no)))
+            )
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-ascensore-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-ha-ascensore) (value ?value & preferisco-si | preferisco-no))
+      =>
+            (if (eq ?value preferisco-si)
+             then (assert (attribute (nome best-ascensore) 
+                          (value si)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-ascensore) 
+                          (value no)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-no)
+             then (assert (attribute (nome best-ascensore) 
+                          (value no)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-ascensore) 
+                          (value si)
+                          (certainty 30.0)))
             )
             (retract ?a)
 )
@@ -1528,7 +1657,7 @@
 (defrule MODIFICA-PREFERENZE::modifica-bagni-cancella
       (declare (salience 20))
             (attribute (nome modifiche) (value ?value & bagni-1 | bagni-2 | bagni-3 | bagni-4))
-      ?a <- (attribute (nome best-bagni & ~any))
+      ?a <- (attribute (nome best-bagni) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
@@ -1578,17 +1707,21 @@
 
 (defrule MODIFICA-PREFERENZE::modifica-balcone-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
-      ?a <- (attribute (nome best-balcone & ~any))
+      (or   (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
+            (attribute (nome modifiche-ha-balcone) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-balcone) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-balcone-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & balcone-si | balcone-no))
+            ?a <- (attribute (nome modifiche-ha-balcone) (value ?value & si | no))
+      )
       =>
-            (if (eq ?value balcone-si)
+            (if (or (eq ?value balcone-si) (eq ?value si))
              then (assert (attribute (nome best-balcone) 
                      (value si)))
              else (assert (attribute (nome best-balcone) 
@@ -1597,21 +1730,48 @@
             (retract ?a)
 )
 
+(defrule MODIFICA-PREFERENZE::modifica-balcone-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-ha-balcone) (value ?value & preferisco-si | preferisco-no))
+      =>
+            (if (eq ?value preferisco-si)
+             then (assert (attribute (nome best-balcone) 
+                          (value si)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-balcone) 
+                          (value no)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-no)
+             then (assert (attribute (nome best-balcone) 
+                          (value no)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-balcone) 
+                          (value si)
+                          (certainty 30.0)))
+            )
+            (retract ?a)
+)
+
 ; Modifiche preferenza boxauto
 
 (defrule MODIFICA-PREFERENZE::modifica-boxauto-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
-      ?a <- (attribute (nome best-boxauto & ~any))
+      (or   (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
+            (attribute (nome modifiche-ha-box) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-boxauto) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-boxauto-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & boxauto-si | boxauto-no))
+            ?a <- (attribute (nome modifiche-ha-box) (value ?value & si | no))
+      )
       =>
-            (if (eq ?value boxauto-si)
+            (if (or (eq ?value boxauto-si) (eq ?value si))
              then (assert (attribute (nome best-boxauto) 
                      (value si)))
              else (assert (attribute (nome best-boxauto) 
@@ -1620,25 +1780,75 @@
             (retract ?a)
 )
 
+(defrule MODIFICA-PREFERENZE::modifica-boxauto-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-ha-box) (value ?value & preferisco-si | preferisco-no))
+      =>
+            (if (eq ?value preferisco-si)
+             then (assert (attribute (nome best-boxauto) 
+                          (value si)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-boxauto) 
+                          (value no)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-no)
+             then (assert (attribute (nome best-boxauto) 
+                          (value no)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-boxauto) 
+                          (value si)
+                          (certainty 30.0)))
+            )
+            (retract ?a)
+)
+
 ; Modifiche preferenza garage
 
 (defrule MODIFICA-PREFERENZE::modifica-garage-cancella
       (declare (salience 20))
-            (attribute (nome modifiche) (value ?value & garage-si | garage-no))
-      ?a <- (attribute (nome best-garage & ~any))
+      (or   (attribute (nome modifiche) (value ?value & garage-si | garage-no))
+            (attribute (nome modifiche-ha-garage) (value ?value & ~qualsiasi))
+      )
+      ?a <- (attribute (nome best-garage) (value ?value2 & ~any))
       =>
             (retract ?a)
 )
 
 (defrule MODIFICA-PREFERENZE::modifica-garage-inserisci
       (declare (salience 10))
-      ?a <- (attribute (nome modifiche) (value ?value & garage-si | garage-no))
+      (or   ?a <- (attribute (nome modifiche) (value ?value & garage-si | garage-no))
+            ?a <- (attribute (nome modifiche-ha-garage) (value ?value & si | no))
+      )
       =>
-            (if (eq ?value garage-si)
+            (if (or (eq ?value garage-si) (eq ?value si))
              then (assert (attribute (nome best-garage) 
                      (value si)))
              else (assert (attribute (nome best-garage) 
                      (value no)))
+            )
+            (retract ?a)
+)
+
+(defrule MODIFICA-PREFERENZE::modifica-garage-inserisci-preferisco
+      (declare (salience 10))
+      ?a <- (attribute (nome modifiche-ha-garage) (value ?value & preferisco-si | preferisco-no))
+      =>
+            (if (eq ?value preferisco-si)
+             then (assert (attribute (nome best-garage) 
+                          (value si)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-garage) 
+                          (value no)
+                          (certainty 30.0)))
+            )
+            (if (eq ?value preferisco-no)
+             then (assert (attribute (nome best-garage) 
+                          (value no)
+                          (certainty 80.0)))
+                  (assert (attribute (nome best-garage) 
+                          (value si)
+                          (certainty 30.0)))
             )
             (retract ?a)
 )
@@ -1648,7 +1858,9 @@
 ;;*************************
 
 (defmodule CASE (import MAIN ?ALL)
-                (import QUARTIERI ?ALL))
+                (import QUARTIERI ?ALL)
+                (export ?ALL)
+)
 
 (deffacts any-attributes
   (attribute (nome best-metriquadri) (value any))
@@ -1662,7 +1874,6 @@
   (attribute (nome best-boxauto) (value any))
   (attribute (nome best-terrazzino) (value any))
   (attribute (nome best-balcone) (value any))
-  (attribute (nome best-prezzo) (value any))
   (attribute (nome best-indipendente) (value any))
   (attribute (nome best-bagni) (value any))
 )
@@ -1715,30 +1926,9 @@
   (casa (nome casaCrocetta2) (metriquadri 70) (vani 2) (piano basso 1) (citta torino) (zona prima-cintura) (quartiere crocetta) 
         (garage si) (boxauto no) (balcone no) (terrazzino no) (indipendente no) (bagni 1))
 )
-
-(defrule CASE::genera-prezzo
-   (declare (salience 10))
-   ?f <- (casa (prezzo any) (metriquadri ?mq) (quartiere ?q) (boxauto $? ?b ?bmq $?) (garage ?g))
-         (quartiere (nome ?q) (costo-mq ?cmq) (servizi $?s))
-   =>    (modify ?f (prezzo (+ (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000)) (* ?bmq ?cmq))))
-         (modify ?f (servizi (length$ $?s)))         
-)
-
-(defrule CASE::genera-prezzo-any
-   (declare (salience 10))
-   ?f <- (casa (prezzo any) (metriquadri ?mq) (quartiere ?q) (boxauto $? ?b $?) (garage ?g))
-         (quartiere (nome ?q) (costo-mq ?cmq) (servizi $?s))
-   =>    (if (eq ?g si)
-          then (modify ?f (prezzo (+ (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000)) 40000)))
-         )
-         (if (eq ?g no)
-          then (modify ?f (prezzo (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000))))
-         )
-         (modify ?f (servizi (length$ $?s)))
-)
   
 (defrule CASE::genera-case
- (declare (salience 5))
+  (attribute (nome prezzo-massimo) (value ?prezzoMax))
   (casa (nome ?nome)
         (metriquadri ?mq)
         (vani ?vani)
@@ -1752,7 +1942,7 @@
         (garage ?garage)
         (terrazzino ?terraz)
         (balcone ?balcone)
-        (prezzo ?prezzo)
+        (prezzo ?prezzo &:(<= (integer ?prezzo) (integer ?prezzoMax)))
         (indipendente ?indip)
         (bagni ?bagni)
   )
@@ -1775,7 +1965,7 @@
   )
 
 (defrule CASE::genera-case2
- (declare (salience 5))
+  (attribute (nome prezzo-massimo) (value ?prezzoMax))
   (casa (nome ?nome)
         (metriquadri ?mq)
         (vani ?vani)
@@ -1789,7 +1979,7 @@
         (garage ?garage)
         (terrazzino ?terraz)
         (balcone ?balcone)
-        (prezzo ?prezzo)
+        (prezzo ?prezzo &:(<= (integer ?prezzo) (integer ?prezzoMax)))
         (indipendente ?indip)
         (bagni ?bagni)
   )
@@ -1810,6 +2000,34 @@
                                 ?certainty-9  ?certainty-14 ?certainty-18 ?certainty-19
                           ))))
   )
+
+;;*********************************
+;;* REGOLE MODIFICHE DOMANDE REDO *
+;;*********************************
+
+(defmodule GENERA-PREZZI    (import MAIN ?ALL)
+                            (import QUARTIERI ?ALL)
+                            (import CASE ?ALL)
+)
+
+(defrule GENERA-PREZZI::genera-prezzo
+   ?f <- (casa (prezzo any) (metriquadri ?mq) (quartiere ?q) (boxauto $? ?b ?bmq $?) (garage ?g))
+         (quartiere (nome ?q) (costo-mq ?cmq) (servizi $?s))
+   =>    (modify ?f (prezzo (+ (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000)) (* ?bmq ?cmq))))
+         (modify ?f (servizi (length$ $?s)))         
+)
+
+(defrule GENERA-PREZZI::genera-prezzo-any
+   ?f <- (casa (prezzo any) (metriquadri ?mq) (quartiere ?q) (boxauto $? ?b $?) (garage ?g))
+         (quartiere (nome ?q) (costo-mq ?cmq) (servizi $?s))
+   =>    (if (eq ?g si)
+          then (modify ?f (prezzo (+ (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000)) 40000)))
+         )
+         (if (eq ?g no)
+          then (modify ?f (prezzo (+ (+ (* ?cmq ?mq) 30000) (* (length$ $?s) 5000))))
+         )
+         (modify ?f (servizi (length$ $?s)))
+)
 
 ;;*****************************
 ;;* STAMPA RISULTATI CASE     *
