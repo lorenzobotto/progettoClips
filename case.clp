@@ -162,7 +162,7 @@
   (domanda (attribute prezzo-massimo)
             (giro 1)
             (the-question "Quanto vuoi spendere come massimo? ")
-            (valid-answers 50000 80000 100000 120000 150000 180000 200000 250000 300000 500000 1000000))
+            (valid-answers 50000 80000 100000 120000 150000 180000 200000 250000 300000 400000 500000 600000 700000 800000 900000 1000000))
   (domanda (attribute ha-garage)
             (giro 1)
             (precursors ha-box is no or ha-box is preferisco-no)
@@ -336,10 +336,10 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-zona) 
                           (value periferia)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
                   (assert (attribute (nome best-zona) 
                           (value prima-cintura)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
             (if (eq ?value preferisco-periferia)
              then (assert (attribute (nome best-zona) 
@@ -347,10 +347,10 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-zona) 
                           (value centro)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
                   (assert (attribute (nome best-zona) 
                           (value prima-cintura)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
             (if (eq ?value preferisco-prima-cintura)
              then (assert (attribute (nome best-zona) 
@@ -358,10 +358,10 @@
                           (certainty 80.0)))
                   (assert (attribute (nome best-zona) 
                           (value centro)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
                   (assert (attribute (nome best-zona) 
                           (value periferia)
-                          (certainty 20.0)))
+                          (certainty 30.0)))
             )
 )
 
@@ -756,7 +756,7 @@
                           (certainty 40.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
-                          (certainty 40.0)))
+                          (certainty 80.0)))
                   (assert (attribute (nome best-garage) 
                           (value si)
                           (certainty 80.0)))
@@ -782,7 +782,7 @@
                           (certainty 100.0)))
                   (assert (attribute (nome best-garage) 
                           (value no)
-                          (certainty 30.0)))
+                          (certainty 80.0)))
             )
 )
 
@@ -1088,6 +1088,7 @@
 
 (defrule SCEGLI-QUALITA::best-fumatore-si
             (attribute (nome fuma) (value ?value & si))
+            (not (attribute (nome ha-balcone) (value ?value2 & si | no)))
       =>
             (assert (attribute (nome best-balcone) 
                         (value si)
@@ -1101,6 +1102,7 @@
 
 (defrule SCEGLI-QUALITA::best-fumatore-no
             (attribute (nome fuma) (value ?value & no))
+            (not (attribute (nome ha-balcone) (value ?value2 & si | no)))
       =>
             (assert (attribute (nome best-balcone) 
                         (value si)
