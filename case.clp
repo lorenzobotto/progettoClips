@@ -215,7 +215,7 @@
    ?f <- (domanda (already-asked FALSE)
                    (giro 2)
                    (precursors)
-                   (the-question "Siete anziani? "))
+                   (the-question "Sei anziano? "))
    =>
       (refresh PRINT-RESULTS::header)
       (refresh PRINT-RESULTS::print-casa)
@@ -312,10 +312,10 @@
 
 (deffacts QUARTIERI::lista-quartieri
       (quartiere (nome parella) (costo-mq 1800) (servizi parco scuola ospedale metro bus stazione supermercato))
-      (quartiere (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato piscina centro-commerciale))
+      (quartiere (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato centro-commerciale))
       (quartiere (nome crocetta) (costo-mq 2500) (servizi ospedale bus metro supermercato palestra))
-      (quartiere (nome mirafiori-nord) (costo-mq 2000) (servizi piscina parco bus metro stazione supermercato palestra))
-      (quartiere (nome centro) (costo-mq 5000) (servizi piscina parco bus metro supermercato palestra centro-commerciale))
+      (quartiere (nome mirafiori-nord) (costo-mq 2000) (servizi parco bus metro stazione supermercato palestra))
+      (quartiere (nome centro) (costo-mq 5000) (servizi parco bus metro supermercato palestra centro-commerciale))
       (quartiere (nome san-salvario) (costo-mq 2000) (servizi parco bus metro supermercato ospedale))
 )
 
@@ -1904,7 +1904,7 @@
 (deffacts CASE::casa-lista 
   (casa (nome casaCentro) (metriquadri 50) (vani 2) (piano basso 1) (citta torino) (zona centro) (quartiere centro) 
         (ascensore no) (boxauto no) (garage no) (terrazzino no) (balcone si) (indipendente no) (bagni 1))
-  (casa (nome casaPeriferia) (metriquadri 60) (vani 2) (piano alto 6) (citta torino) (zona periferia) (quartiere barriera-milano) 
+  (casa (nome casaPeriferia) (metriquadri 70) (vani 2) (piano alto 6) (citta torino) (zona periferia) (quartiere barriera-milano) 
         (ascensore si) (boxauto si 15) (garage no) (terrazzino si) (balcone si) (indipendente no) (bagni 1))
   (casa (nome villaCentro) (metriquadri 250) (vani 7) (citta torino) (zona centro) (quartiere centro) 
         (boxauto no) (garage si) (terrazzino si) (balcone si) (indipendente si) (bagni 3))
@@ -1922,7 +1922,7 @@
         (garage no) (boxauto si 20) (balcone si) (terrazzino si) (indipendente no) (bagni 1))
   (casa (nome casaPeriferia3) (metriquadri 200) (vani 4) (citta torino) (zona periferia) (quartiere san-salvario) 
         (garage si) (balcone si) (indipendente si) (bagni 2))
-  (casa (nome casaPeriferia4) (metriquadri 120) (vani 2) (citta torino) (zona periferia) (quartiere barriera-milano) 
+  (casa (nome casaPeriferia4) (metriquadri 80) (vani 2) (citta torino) (zona periferia) (quartiere barriera-milano) 
         (garage no) (boxauto si 35) (terrazzino no) (indipendente si) (bagni 2))
   (casa (nome casaCrocetta) (metriquadri 90) (vani 3) (citta torino) (zona prima-cintura) (quartiere crocetta) 
         (garage si) (boxauto no) (balcone si) (indipendente si) (bagni 2))
