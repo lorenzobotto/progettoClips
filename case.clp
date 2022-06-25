@@ -25,7 +25,8 @@
   (test (neq ?rem1 ?rem2))
   =>
   (retract ?rem1)
-  (modify ?rem2 (certainty (/ (- (* 100 (+ ?per1 ?per2)) (* ?per1 ?per2)) 100))))
+  (modify ?rem2 (certainty (/ (- (* 100 (+ ?per1 ?per2)) (* ?per1 ?per2))
+   100))))
 
 ;;****************
 ;;* DEFFUNCTIONS *
@@ -157,7 +158,7 @@
             (valid-answers si no))
   (domanda (attribute sono-anziani)
             (giro 2)
-            (the-question "Siete anziani? ")
+            (the-question "Sei anziano? ")
             (valid-answers si no))
   (domanda (attribute prezzo-massimo)
             (giro 1)
