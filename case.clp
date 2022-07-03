@@ -142,8 +142,8 @@
             (valid-answers si no ogni-tanto))
   (domanda (attribute fa-pendolare)
             (giro 2)
-            (the-question "Fai il pendolare, ti sposti in Torino tramite i mezzi o usi la macchina? ")
-            (valid-answers pendolare torino macchina))
+            (the-question "Fai il pendolare, ti sposti nella città tramite i mezzi o usi la macchina? ")
+            (valid-answers pendolare mezzi macchina))
   (domanda (attribute fuma)
             (giro 2)
             (the-question "Fumi? ")
@@ -203,6 +203,10 @@
             (giro 1)
             (the-question "In che zona vuoi comprare la casa? ")
             (valid-answers centro periferia prima-cintura preferisco-centro preferisco-prima-cintura preferisco-periferia qualsiasi))
+  (domanda (attribute casa-citta)
+            (giro 1)
+            (the-question "In che città stai cercando la casa? ")
+            (valid-answers torino milano roma venezia bologna napoli))
 )
 
 ;;*******************************
@@ -306,17 +310,18 @@
 
 (deftemplate QUARTIERI::quartiere
   (slot nome (default ?NONE))
+  (slot citta (default ?NONE))
   (slot costo-mq (default any))
   (multislot servizi (default any))
 )
 
 (deffacts QUARTIERI::lista-quartieri
-      (quartiere (nome parella) (costo-mq 1800) (servizi parco scuola ospedale metro bus stazione supermercato))
-      (quartiere (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato centro-commerciale))
-      (quartiere (nome crocetta) (costo-mq 2500) (servizi ospedale bus metro supermercato palestra))
-      (quartiere (nome mirafiori-nord) (costo-mq 2000) (servizi parco bus metro stazione supermercato palestra))
-      (quartiere (nome centro) (costo-mq 5000) (servizi parco bus metro supermercato palestra centro-commerciale))
-      (quartiere (nome san-salvario) (costo-mq 2000) (servizi parco bus metro supermercato ospedale))
+      (quartiere (citta torino) (nome parella) (costo-mq 1800) (servizi parco scuola ospedale metro bus stazione supermercato))
+      (quartiere (citta torino) (nome barriera-milano) (costo-mq 1000) (servizi parco scuola ospedale bus supermercato centro-commerciale))
+      (quartiere (citta torino) (nome crocetta) (costo-mq 2500) (servizi ospedale bus metro supermercato palestra))
+      (quartiere (citta torino) (nome mirafiori-nord) (costo-mq 2000) (servizi parco bus metro stazione supermercato palestra))
+      (quartiere (citta torino) (nome centro) (costo-mq 5000) (servizi parco bus metro supermercato palestra centro-commerciale))
+      (quartiere (citta torino) (nome san-salvario) (costo-mq 2000) (servizi parco bus metro supermercato ospedale))
 )
 
 ;;*******************************
@@ -919,10 +924,11 @@
 
 (defrule SCEGLI-QUALITA::best-bambini
             (attribute (nome ha-bambini) (value ?value & si))
-            (or   (quartiere (nome ?nq) (servizi $? parco $?))
-                  (quartiere (nome ?nq) (servizi $? scuola $? ))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (or   (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? parco $?))
+                  (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? scuola $? ))
             )
-            (not (quartiere (nome ?nq) (servizi $? parco scuola $?)))
+            (not (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? parco scuola $?)))
       =>
             (assert (attribute (nome best-quartiere) 
                         (value ?nq)
@@ -932,7 +938,8 @@
 
 (defrule SCEGLI-QUALITA::best-bambini-parco-scuola
             (attribute (nome ha-bambini) (value ?value & si))
-            (quartiere (nome ?nq) (servizi $? parco scuola $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? parco scuola $?))
       =>
             (assert (attribute (nome best-quartiere) 
                         (value ?nq)
@@ -1009,7 +1016,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping
             (attribute (nome fa-shopping) (value ?value & si))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1024,7 +1032,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping-sicuro
             (attribute (nome fa-shopping) (value ?value & si))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1035,7 +1044,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping-ogni-tanto
             (attribute (nome fa-shopping) (value ?value & ogni-tanto))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1050,7 +1060,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping-ogni-tanto-sicuro
             (attribute (nome fa-shopping) (value ?value & ogni-tanto))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1061,7 +1072,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping-no
             (attribute (nome fa-shopping) (value ?value & no))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (not (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura)))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1076,7 +1088,8 @@
 
 (defrule SCEGLI-QUALITA::best-shopping-no-sicuro
             (attribute (nome fa-shopping) (value ?value & no))
-            (quartiere (nome ?nq) (servizi $? centro-commerciale $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? centro-commerciale $?))
             (attribute (nome casa-zona) (value ?value2 & centro | periferia | prima-cintura))
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1119,7 +1132,8 @@
 
 (defrule SCEGLI-QUALITA::best-pendolare-si
             (attribute (nome fa-pendolare) (value ?value & pendolare))
-            (quartiere (nome ?nq) (servizi $? stazione $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? stazione $?))
       =>
             (assert (attribute (nome best-quartiere) 
                         (value ?nq)
@@ -1127,10 +1141,11 @@
             )
 )
 
-(defrule SCEGLI-QUALITA::best-pendolare-torino
-            (attribute (nome fa-pendolare) (value ?value & torino))
-            (or (quartiere (nome ?nq) (servizi $? bus $?))
-                (quartiere (nome ?nq) (servizi $? metro $?))
+(defrule SCEGLI-QUALITA::best-pendolare-mezzi
+            (attribute (nome fa-pendolare) (value ?value & mezzi))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (or (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? bus $?))
+                (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? metro $?))
             )
       =>
             (assert (attribute (nome best-quartiere) 
@@ -1141,7 +1156,7 @@
 
 (defrule SCEGLI-QUALITA::best-pendolare-macchina
             (attribute (nome fa-pendolare) (value ?value & macchina))
-            (quartiere (nome ?nq))
+            (quartiere (citta ?casaCitta) (nome ?nq))
       =>
             (assert (attribute (nome best-quartiere) 
                         (value ?nq)
@@ -1208,7 +1223,8 @@
 
 (defrule SCEGLI-QUALITA::best-cane-si-quart
             (attribute (nome ha-cane) (value ?value & si))
-            (quartiere (nome ?nq) (servizi $? parco $?))
+            (attribute (nome casa-citta) (value ?casaCitta))
+            (quartiere (citta ?casaCitta) (nome ?nq) (servizi $? parco $?))
       =>
             (assert (attribute (nome best-quartiere) 
                         (value ?nq)
@@ -1932,12 +1948,13 @@
   
 (defrule CASE::genera-case
   (attribute (nome prezzo-massimo) (value ?prezzoMax))
+  (attribute (nome casa-citta) (value ?casaCitta))
   (casa (nome ?nome)
         (metriquadri ?mq)
         (vani ?vani)
         (servizi ?serv)
         (piano $? ?pianoAltezza $?)
-        (citta ?citta)
+        (citta ?citta & ?casaCitta)
         (zona ?zona)
         (quartiere ?quart)
         (ascensore ?asce)
@@ -1969,12 +1986,13 @@
 
 (defrule CASE::genera-case2
   (attribute (nome prezzo-massimo) (value ?prezzoMax))
+  (attribute (nome casa-citta) (value ?casaCitta))
   (casa (nome ?nome)
         (metriquadri ?mq)
         (vani ?vani)
         (servizi ?serv)
         (piano $? ?pianoAltezza $?)
-        (citta ?citta)
+        (citta ?citta & ?casaCitta)
         (zona ?zona)
         (quartiere ?quart)
         (ascensore ?asce)
