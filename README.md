@@ -41,3 +41,9 @@ Ed infine eseguire:
 ```
 (run)
 ```
+
+## Video esecuzione del progetto
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=j-l6Q-yiKls
+" rel="noopener" target="_blank"><img src="http://img.youtube.com/vi/j-l6Q-yiKls/0.jpg" 
+alt="Esecuzione CLIPS" width="400" border="10" /></a>
