@@ -23,6 +23,8 @@ Ad ogni giro di domande vengono inseriti vincoli hard e soft per selezionare del
 
 [^1]: Certainty Factor: E' il fattore di certezza. Viene assegnato un valore CF alle case per indicare la certezza con cui quella casa verrà scelta dall'utente.
 
+**Disclaimer: Tutti i dati inseriti da me sono dati di prova, completamente casuali e non sono da intendere come reali. Derivano tutti dalla mia immaginazione e inseriti casualmente. Non utilizzare alcun dato per nessun scopo particolare. Non mi assumo nessuna responsabilità.**
+
 ## Come eseguire
 
 Installare CLIPS da https://www.clipsrules.net/. Una volta installato, utilizzare l'IDE per eseguire.
